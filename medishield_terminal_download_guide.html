@@ -1,0 +1,420 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);color:var(--color-text-primary)}
+.wrap{padding:1rem 0;max-width:680px}
+.section-label{font-size:11px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-secondary);margin:1.5rem 0 .6rem}
+.code-block{background:#1a1a2e;border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin:.4rem 0;position:relative;overflow-x:auto}
+.code-block pre{font-family:var(--font-mono);font-size:12.5px;line-height:1.9;color:#e2e8f0;white-space:pre;margin:0}
+.comment{color:#6a9955}
+.cmd{color:#9cdcfe}
+.string{color:#ce9178}
+.keyword{color:#569cd6}
+.output{color:#b5cea8}
+.copy-btn{position:absolute;top:8px;right:10px;font-size:11px;font-weight:500;padding:3px 10px;background:#2d3748;color:#a0aec0;border:0.5px solid #4a5568;border-radius:6px;cursor:pointer;transition:background .15s}
+.copy-btn:hover{background:#4a5568;color:#fff}
+.copy-btn.copied{background:#2d6a4f;color:#74c69d;border-color:#2d6a4f}
+.pill{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;margin-right:4px}
+.pill-green{background:#EAF3DE;color:#3B6D11}
+.pill-blue{background:#E6F1FB;color:#0C447C}
+.pill-amber{background:#FAEEDA;color:#854F0B}
+.pill-red{background:#FCEBEB;color:#A32D2D}
+.pill-purple{background:#EEEDFE;color:#3C3489}
+.pill-teal{background:#E1F5EE;color:#0F6E56}
+.pill-gray{background:#F1EFE8;color:#5F5E5A}
+.step-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:.9rem 1.2rem;margin-bottom:.75rem}
+.step-row{display:flex;gap:10px;align-items:flex-start;padding:.4rem 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.step-row:last-child{border-bottom:none}
+.step-num{min-width:20px;height:20px;border-radius:50%;background:#E6F1FB;color:#0C447C;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px}
+.step-text{font-size:13px;line-height:1.6}
+.warn-box{background:#FAEEDA;border-left:3px solid #BA7517;border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;padding:.7rem 1rem;margin:.6rem 0}
+.warn-box p{font-size:12px;color:#633806;line-height:1.6}
+.info-box{background:#E6F1FB;border-left:3px solid #185FA5;border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;padding:.7rem 1rem;margin:.6rem 0}
+.info-box p{font-size:12px;color:#042C53;line-height:1.6}
+.tab-bar{display:flex;gap:0;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:1.25rem;flex-wrap:wrap}
+.tab-btn{font-size:12px;font-weight:500;padding:7px 13px;border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab-btn.active{color:#185FA5;border-bottom:2px solid #185FA5}
+.tab-content{display:none}.tab-content.active{display:block}
+.ds-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.ds-sub{font-size:12px;color:var(--color-text-secondary);margin-bottom:.5rem}
+.separator{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:1.25rem 0}
+</style>
+
+<div class="wrap">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
+    <div style="background:#1a1a2e;border-radius:var(--border-radius-md);padding:6px 14px">
+      <span style="font-size:15px;font-weight:500;color:#9cdcfe;font-family:var(--font-mono)">$ MediShield</span>
+      <span style="font-size:11px;color:#6a9955;margin-left:8px;font-family:var(--font-mono)"># terminal download guide</span>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="sw('setup')">Step 0: Setup</button>
+    <button class="tab-btn" onclick="sw('kaggle')">Kaggle Datasets</button>
+    <button class="tab-btn" onclick="sw('mvtec')">MVTec Anomaly</button>
+    <button class="tab-btn" onclick="sw('nih')">NIH C3PI</button>
+    <button class="tab-btn" onclick="sw('organise')">Organise + Verify</button>
+  </div>
+
+  <!-- SETUP -->
+  <div id="tab-setup" class="tab-content active">
+    <p class="section-label">Install requirements</p>
+    <div class="code-block" id="cb-setup">
+      <button class="copy-btn" onclick="copyBlock('cb-setup',this)">Copy</button>
+      <pre><span class="comment"># Install Kaggle API (one time only)</span>
+<span class="cmd">pip install kaggle</span>
+
+<span class="comment"># Verify installation</span>
+<span class="cmd">kaggle --version</span></pre>
+    </div>
+
+    <p class="section-label">Configure your Kaggle API key</p>
+    <div class="step-card">
+      <div class="step-row"><div class="step-num">1</div><div class="step-text">Go to <strong>kaggle.com → Your Profile → Settings → API</strong></div></div>
+      <div class="step-row"><div class="step-num">2</div><div class="step-text">Click <strong>"Create New Token"</strong> → downloads <code style="font-family:var(--font-mono);font-size:12px">kaggle.json</code></div></div>
+      <div class="step-row"><div class="step-num">3</div><div class="step-text">Move the file and set permissions:</div></div>
+    </div>
+
+    <div class="code-block" id="cb-creds">
+      <button class="copy-btn" onclick="copyBlock('cb-creds',this)">Copy</button>
+      <pre><span class="comment"># Linux / macOS</span>
+<span class="cmd">mkdir -p ~/.kaggle</span>
+<span class="cmd">mv ~/Downloads/kaggle.json ~/.kaggle/kaggle.json</span>
+<span class="cmd">chmod 600 ~/.kaggle/kaggle.json</span>
+
+<span class="comment"># Windows (PowerShell)</span>
+<span class="cmd">mkdir $env:USERPROFILE\.kaggle</span>
+<span class="cmd">copy $env:USERPROFILE\Downloads\kaggle.json $env:USERPROFILE\.kaggle\kaggle.json</span></pre>
+    </div>
+
+    <div class="info-box">
+      <p><strong>Test it works:</strong> Run <code style="font-family:var(--font-mono)">kaggle datasets list</code> — if it prints dataset names, your key is working. If you see "401 Unauthorized", your kaggle.json is in the wrong place or corrupted.</p>
+    </div>
+
+    <p class="section-label">Create project folder structure</p>
+    <div class="code-block" id="cb-mkdir">
+      <button class="copy-btn" onclick="copyBlock('cb-mkdir',this)">Copy</button>
+      <pre><span class="cmd">mkdir -p medishield_data/raw/{tablet,capsule,syrup,injection,other}</span>
+<span class="cmd">mkdir -p medishield_data/anomaly</span>
+<span class="cmd">mkdir -p medishield_data/downloads</span>
+<span class="cmd">cd medishield_data/downloads</span></pre>
+    </div>
+  </div>
+
+  <!-- KAGGLE -->
+  <div id="tab-kaggle" class="tab-content">
+    <p class="section-label">Run all 5 downloads in sequence</p>
+
+    <div style="margin-bottom:1rem">
+      <div class="ds-title">1. Mobile Captured Pharmaceutical Medication Packages</div>
+      <div class="ds-sub"><span class="pill pill-green">⭐ Best pick</span><span class="pill pill-blue">~500 images</span><span class="pill pill-teal">Tablets · Capsules · Syrups</span></div>
+      <div class="code-block" id="cb-ds1">
+        <button class="copy-btn" onclick="copyBlock('cb-ds1',this)">Copy</button>
+        <pre><span class="cmd">kaggle datasets download \</span>
+  <span class="string">aryashah2k/mobile-captured-pharmaceutical-medication-packages</span> \
+  <span class="keyword">-p</span> ./dataset1 <span class="keyword">--unzip</span>
+<span class="output"># Downloads to: ./dataset1/</span></pre>
+      </div>
+    </div>
+
+    <hr class="separator">
+
+    <div style="margin-bottom:1rem">
+      <div class="ds-title">2. Pharmaceutical Drugs and Vitamins Synthetic Images</div>
+      <div class="ds-sub"><span class="pill pill-blue">Augmentation boost</span><span class="pill pill-blue">~1,000 images</span><span class="pill pill-amber">Synthetic</span></div>
+      <div class="code-block" id="cb-ds2">
+        <button class="copy-btn" onclick="copyBlock('cb-ds2',this)">Copy</button>
+        <pre><span class="cmd">kaggle datasets download \</span>
+  <span class="string">vencerlanz09/pharmaceutical-drugs-and-vitamins-synthetic-images</span> \
+  <span class="keyword">-p</span> ./dataset2 <span class="keyword">--unzip</span>
+<span class="output"># Downloads to: ./dataset2/</span></pre>
+      </div>
+    </div>
+
+    <hr class="separator">
+
+    <div style="margin-bottom:1rem">
+      <div class="ds-title">3. 1k Pharmaceutical Pill Image Dataset</div>
+      <div class="ds-sub"><span class="pill pill-blue">~1,000 images</span><span class="pill pill-teal">Tablets · Capsules</span></div>
+      <div class="code-block" id="cb-ds3">
+        <button class="copy-btn" onclick="copyBlock('cb-ds3',this)">Copy</button>
+        <pre><span class="cmd">kaggle datasets download \</span>
+  <span class="string">trumedicines/1k-pharmaceutical-pill-image-dataset</span> \
+  <span class="keyword">-p</span> ./dataset3 <span class="keyword">--unzip</span>
+<span class="output"># Downloads to: ./dataset3/</span></pre>
+      </div>
+    </div>
+
+    <hr class="separator">
+
+    <div style="margin-bottom:1rem">
+      <div class="ds-title">4. Pharmaceutical Tablets Dataset</div>
+      <div class="ds-sub"><span class="pill pill-blue">~300 images</span><span class="pill pill-teal">Tablets</span></div>
+      <div class="code-block" id="cb-ds4">
+        <button class="copy-btn" onclick="copyBlock('cb-ds4',this)">Copy</button>
+        <pre><span class="cmd">kaggle datasets download \</span>
+  <span class="string">trumedicines/pharmaceutical-tablets-dataset</span> \
+  <span class="keyword">-p</span> ./dataset4 <span class="keyword">--unzip</span>
+<span class="output"># Downloads to: ./dataset4/</span></pre>
+      </div>
+    </div>
+
+    <hr class="separator">
+
+    <div style="margin-bottom:1rem">
+      <div class="ds-title">5. Pharmacy Products Dataset</div>
+      <div class="ds-sub"><span class="pill pill-teal">⭐ Has syrup class</span><span class="pill pill-blue">~400 images</span></div>
+      <div class="code-block" id="cb-ds5">
+        <button class="copy-btn" onclick="copyBlock('cb-ds5',this)">Copy</button>
+        <pre><span class="cmd">kaggle datasets download \</span>
+  <span class="string">hossam82/pharmacy-products-dataset</span> \
+  <span class="keyword">-p</span> ./dataset5 <span class="keyword">--unzip</span>
+<span class="output"># Downloads to: ./dataset5/</span></pre>
+      </div>
+    </div>
+
+    <hr class="separator">
+
+    <div style="margin-bottom:1rem">
+      <div class="ds-title">6. Ecommerce Counterfeit Products (Anomaly use)</div>
+      <div class="ds-sub"><span class="pill pill-amber">Anomaly signal</span><span class="pill pill-red">Treat as stress data only</span></div>
+      <div class="code-block" id="cb-ds6">
+        <button class="copy-btn" onclick="copyBlock('cb-ds6',this)">Copy</button>
+        <pre><span class="cmd">kaggle datasets download \</span>
+  <span class="string">aimlveera/counterfeit-product-detection-dataset</span> \
+  <span class="keyword">-p</span> ./dataset6_anomaly <span class="keyword">--unzip</span>
+<span class="output"># Downloads to: ./dataset6_anomaly/</span></pre>
+      </div>
+    </div>
+
+    <p class="section-label">Download all 6 in one shot (bash script)</p>
+    <div class="code-block" id="cb-allkaggle">
+      <button class="copy-btn" onclick="copyBlock('cb-allkaggle',this)">Copy</button>
+      <pre><span class="comment">#!/bin/bash</span>
+<span class="keyword">declare -a</span> <span class="cmd">DATASETS</span>=(
+  <span class="string">"aryashah2k/mobile-captured-pharmaceutical-medication-packages"</span>
+  <span class="string">"vencerlanz09/pharmaceutical-drugs-and-vitamins-synthetic-images"</span>
+  <span class="string">"trumedicines/1k-pharmaceutical-pill-image-dataset"</span>
+  <span class="string">"trumedicines/pharmaceutical-tablets-dataset"</span>
+  <span class="string">"hossam82/pharmacy-products-dataset"</span>
+  <span class="string">"aimlveera/counterfeit-product-detection-dataset"</span>
+)
+
+<span class="keyword">for</span> ds <span class="keyword">in</span> <span class="string">"${DATASETS[@]}"</span>; <span class="keyword">do</span>
+  name=$(echo $ds | cut -d'/' -f2)
+  echo <span class="string">"Downloading: $ds"</span>
+  <span class="cmd">kaggle datasets download "$ds" -p "./$name" --unzip</span>
+  echo <span class="string">"Done: $name"</span>
+<span class="keyword">done</span>
+echo <span class="string">"All datasets downloaded."</span></pre>
+    </div>
+    <div class="info-box">
+      <p>Save the above as <code style="font-family:var(--font-mono)">download_all.sh</code> then run: <code style="font-family:var(--font-mono)">chmod +x download_all.sh && ./download_all.sh</code></p>
+    </div>
+  </div>
+
+  <!-- MVTEC -->
+  <div id="tab-mvtec" class="tab-content">
+    <div class="info-box">
+      <p><strong>MVTec AD has a public FTP server</strong> — no registration needed, direct wget command works. The full dataset is 4.9 GB. For MediShield you only need the <strong>capsule</strong> and <strong>bottle</strong> subsets (~200 MB total).</p>
+    </div>
+
+    <p class="section-label">Option A — Download full MVTec AD (4.9 GB)</p>
+    <div class="code-block" id="cb-mvtec-full">
+      <button class="copy-btn" onclick="copyBlock('cb-mvtec-full',this)">Copy</button>
+      <pre><span class="cmd">wget</span> <span class="string">ftp://guest:GU.205dldo@ftp.softronics.ch/mvtec_anomaly_detection/mvtec_anomaly_detection.tar.xz</span>
+
+<span class="comment"># Extract everything</span>
+<span class="cmd">tar -xJf mvtec_anomaly_detection.tar.xz</span>
+<span class="output"># Extracts: bottle/ capsule/ hazelnut/ leather/ ... (15 folders)</span></pre>
+    </div>
+
+    <p class="section-label">Option B — Extract only capsule + bottle subsets (recommended)</p>
+    <div class="code-block" id="cb-mvtec-subset">
+      <button class="copy-btn" onclick="copyBlock('cb-mvtec-subset',this)">Copy</button>
+      <pre><span class="comment"># Download first (same as above)</span>
+<span class="cmd">wget</span> <span class="string">ftp://guest:GU.205dldo@ftp.softronics.ch/mvtec_anomaly_detection/mvtec_anomaly_detection.tar.xz</span>
+
+<span class="comment"># Extract ONLY capsule and bottle folders</span>
+<span class="cmd">tar -xJf mvtec_anomaly_detection.tar.xz</span> \
+  <span class="string">mvtec_anomaly_detection/capsule</span> \
+  <span class="string">mvtec_anomaly_detection/bottle</span>
+
+<span class="comment"># Move to anomaly folder</span>
+<span class="cmd">mv mvtec_anomaly_detection/capsule ../anomaly/mvtec_capsule</span>
+<span class="cmd">mv mvtec_anomaly_detection/bottle ../anomaly/mvtec_bottle</span>
+
+<span class="output"># Folder structure after extraction:</span>
+<span class="output"># mvtec_capsule/train/good/      ← clean reference images</span>
+<span class="output"># mvtec_capsule/test/crack/      ← cracked capsules (anomaly)</span>
+<span class="output"># mvtec_capsule/test/faulty_imprint/  ← label anomaly</span>
+<span class="output"># mvtec_capsule/test/squeeze/    ← deformed capsules</span></pre>
+    </div>
+
+    <div class="warn-box">
+      <p><strong>License note:</strong> MVTec AD is CC BY-NC-SA 4.0 — non-commercial use only. For a hackathon project this is perfectly fine. Do not use it in a commercial product.</p>
+    </div>
+
+    <p class="section-label">Verify the anomaly subset downloaded correctly</p>
+    <div class="code-block" id="cb-mvtec-verify">
+      <button class="copy-btn" onclick="copyBlock('cb-mvtec-verify',this)">Copy</button>
+      <pre><span class="comment"># Count anomaly images in capsule subset</span>
+<span class="cmd">find</span> mvtec_capsule/test <span class="keyword">-name</span> <span class="string">"*.png"</span> | <span class="cmd">wc -l</span>
+<span class="output"># Expected: ~120 anomalous + ~20 good test images</span>
+
+<span class="cmd">ls</span> mvtec_capsule/test/
+<span class="output"># crack  faulty_imprint  good  poke  scratch  squeeze</span></pre>
+    </div>
+  </div>
+
+  <!-- NIH -->
+  <div id="tab-nih" class="tab-content">
+    <div class="info-box">
+      <p><strong>NIH C3PI</strong> is hosted on data.gov. The sample ZIP (493 MB) is the right choice for hackathon — the full training set is 6.8 GB. Direct wget works, no auth needed.</p>
+    </div>
+
+    <p class="section-label">Option A — NIH C3PI Sample data (493 MB) — recommended</p>
+    <div class="code-block" id="cb-nih-sample">
+      <button class="copy-btn" onclick="copyBlock('cb-nih-sample',this)">Copy</button>
+      <pre><span class="comment"># Direct download from data.gov (no login needed)</span>
+<span class="cmd">wget</span> <span class="keyword">-O</span> c3pi_sample.zip \
+  <span class="string">"https://data.lhncbc.nlm.nih.gov/public/Pills/C3PI/c3piSampleData.zip"</span>
+
+<span class="comment"># Unzip</span>
+<span class="cmd">unzip c3pi_sample.zip -d ./nih_c3pi_sample</span>
+
+<span class="output"># Contains ~500 reference pill images (tablets + capsules)</span></pre>
+    </div>
+
+    <p class="section-label">Option B — Reference images only (4,000 high-quality images, 6.8 GB)</p>
+    <div class="code-block" id="cb-nih-ref">
+      <button class="copy-btn" onclick="copyBlock('cb-nih-ref',this)">Copy</button>
+      <pre><span class="comment"># Only run if you want the full high-quality reference set</span>
+<span class="cmd">wget</span> <span class="keyword">-O</span> c3pi_reference.zip \
+  <span class="string">"https://data.lhncbc.nlm.nih.gov/public/Pills/C3PI/C3PI_Test.zip"</span>
+
+<span class="cmd">unzip c3pi_reference.zip -d ./nih_c3pi_reference</span></pre>
+    </div>
+
+    <p class="section-label">Alternative — Hugging Face mirror of MVTec (easier, no FTP)</p>
+    <div class="code-block" id="cb-hf">
+      <button class="copy-btn" onclick="copyBlock('cb-hf',this)">Copy</button>
+      <pre><span class="comment"># Install huggingface_hub first</span>
+<span class="cmd">pip install huggingface_hub</span>
+
+<span class="comment"># Download MVTec AD via Hugging Face (no FTP needed)</span>
+<span class="cmd">python3</span> -c <span class="string">"
+from huggingface_hub import snapshot_download
+snapshot_download(
+  repo_id='Voxel51/mvtec-ad',
+  repo_type='dataset',
+  local_dir='./mvtec_hf',
+  ignore_patterns=['*.tar.xz']
+)
+print('Done')
+"</span></pre>
+    </div>
+  </div>
+
+  <!-- ORGANISE -->
+  <div id="tab-organise" class="tab-content">
+    <p class="section-label">Verify all downloads</p>
+    <div class="code-block" id="cb-verify">
+      <button class="copy-btn" onclick="copyBlock('cb-verify',this)">Copy</button>
+      <pre><span class="comment"># Count images per downloaded dataset</span>
+<span class="keyword">for</span> dir <span class="keyword">in</span> dataset1 dataset2 dataset3 dataset4 dataset5; <span class="keyword">do</span>
+  count=$(<span class="cmd">find</span> ./$dir <span class="keyword">-name</span> <span class="string">"*.jpg" -o -name "*.png" -o -name "*.jpeg"</span> | <span class="cmd">wc -l</span>)
+  echo <span class="string">"$dir: $count images"</span>
+<span class="keyword">done</span>
+
+<span class="output"># Expected output:
+# dataset1: ~500 images
+# dataset2: ~1000 images
+# dataset3: ~1000 images
+# dataset4: ~300 images
+# dataset5: ~400 images</span></pre>
+    </div>
+
+    <p class="section-label">Remove duplicate images (hash-based)</p>
+    <div class="code-block" id="cb-dedup">
+      <button class="copy-btn" onclick="copyBlock('cb-dedup',this)">Copy</button>
+      <pre><span class="cmd">pip install imagededup</span>
+
+<span class="cmd">python3</span> -c <span class="string">"
+from imagededup.methods import PHash
+phasher = PHash()
+
+for folder in ['dataset1','dataset2','dataset3','dataset4','dataset5']:
+    dupes = phasher.find_duplicates(image_dir=f'./{folder}', max_distance_threshold=10)
+    total = sum(len(v) for v in dupes.values())
+    print(f'{folder}: {total} duplicates found')
+"</span></pre>
+    </div>
+
+    <p class="section-label">Check minimum image size (filter out tiny images)</p>
+    <div class="code-block" id="cb-sizecheck">
+      <button class="copy-btn" onclick="copyBlock('cb-sizecheck',this)">Copy</button>
+      <pre><span class="cmd">python3</span> -c <span class="string">"
+from PIL import Image
+import os, glob
+
+too_small = []
+for path in glob.glob('./dataset*/**/*.jpg', recursive=True) + \
+            glob.glob('./dataset*/**/*.png', recursive=True):
+    try:
+        w, h = Image.open(path).size
+        if w < 80 or h < 80:
+            too_small.append(path)
+    except: pass
+
+print(f'Images too small (<80px): {len(too_small)}')
+for p in too_small[:10]:
+    print(' ', p)
+"</span></pre>
+    </div>
+
+    <p class="section-label">Final dataset summary count</p>
+    <div class="code-block" id="cb-summary">
+      <button class="copy-btn" onclick="copyBlock('cb-summary',this)">Copy</button>
+      <pre><span class="cmd">python3</span> -c <span class="string">"
+import os, glob
+
+classes = ['tablet','capsule','syrup','injection','other']
+base = '../raw'
+
+print('Class         | Count | Status')
+print('-'*40)
+for cls in classes:
+    path = os.path.join(base, cls)
+    if os.path.exists(path):
+        n = len(glob.glob(f'{path}/*.jpg') + glob.glob(f'{path}/*.png'))
+        status = 'OK' if n >= 50 else 'NEEDS MORE'
+        print(f'{cls:<14}| {n:<6}| {status}')
+    else:
+        print(f'{cls:<14}| 0     | MISSING FOLDER')
+"</span></pre>
+    </div>
+
+    <div class="warn-box">
+      <p><strong>Injection class gap:</strong> No Kaggle dataset covers injections well. Manually download 50+ images from <code style="font-family:var(--font-mono)">dailymed.nlm.nih.gov/dailymed/search.cfm?query=injection</code> (official FDA product images, public domain) and place them in <code style="font-family:var(--font-mono)">raw/injection/</code>.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function sw(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+function copyBlock(id, btn){
+  const pre = document.getElementById(id).querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Copied!';
+    btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000);
+  });
+}
+</script>
