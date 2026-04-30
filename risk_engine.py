@@ -530,20 +530,36 @@ def _sanitize_inputs(
         conflicts, issues, ocr_confidence, predicted_class, classifier_conf,
         qr_data, agreement_score, image_count
     """
-    conflicts        = ocr_output.get("conflicts", []) or []
-    issues           = ocr_output.get("validation", []) or []
+    conflicts_raw    = ocr_output.get("conflicts", []) or []
+    issues_raw       = ocr_output.get("validation", []) or []
     ocr_confidence   = float(ocr_output.get("ocr_confidence", 0.5))
     qr_data          = ocr_output.get("qr_data", None)
 
     # Derived parameters may contain agreement score and image count
     derived          = ocr_output.get("derived_parameters", {}) or {}
     agreement_score  = float(derived.get("agreement_score",
-                             ocr_output.get("agreement_score", 1.0)))
+                              ocr_output.get("agreement_score", 1.0)))
     image_count      = int(derived.get("image_count",
                           ocr_output.get("image_count", 1)))
 
     predicted_class  = str(classifier_output.get("predicted_class", "unknown"))
     classifier_conf  = float(classifier_output.get("confidence", 0.5))
+
+    conflicts: list[dict] = []
+    for item in conflicts_raw:
+        if isinstance(item, dict):
+            conflicts.append(item)
+            continue
+        text = str(item)
+        field_name = text.split(" mismatch", 1)[0].strip().lower()
+        conflicts.append({"field": field_name, "type": "mismatch", "details": text})
+
+    if isinstance(issues_raw, dict):
+        issues = issues_raw.get("issues", []) or []
+    elif isinstance(issues_raw, list):
+        issues = issues_raw
+    else:
+        issues = [issues_raw] if issues_raw else []
 
     # Clamp numeric values
     ocr_confidence  = max(0.0, min(1.0, ocr_confidence))

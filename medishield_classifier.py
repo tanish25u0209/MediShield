@@ -245,7 +245,7 @@ def load_data():
     counts = Counter(labels)
     print("[load_data] Discovered samples:")
     for label_idx in sorted(counts):
-        print(f"  ✔ {IDX_TO_CLASS[label_idx]:<9}: {counts[label_idx]}")
+        print(f"  [OK] {IDX_TO_CLASS[label_idx]:<9}: {counts[label_idx]}")
 
     train_samples, val_samples = train_test_split(
         samples,
@@ -273,8 +273,8 @@ def load_data():
         pin_memory=torch.cuda.is_available(),
     )
 
-    print(f"  ✔ Training samples  : {len(train_dataset)}")
-    print(f"  ✔ Validation samples: {len(val_dataset)}")
+    print(f"  [OK] Training samples  : {len(train_dataset)}")
+    print(f"  [OK] Validation samples: {len(val_dataset)}")
 
     return train_loader, val_loader, samples
 
@@ -310,8 +310,8 @@ def build_model(freeze_base: bool = True) -> nn.Module:
 
     trainable_count = sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
     total_count = sum(parameter.numel() for parameter in model.parameters())
-    print(f"  ✔ Trainable params  : {trainable_count:,}")
-    print(f"  ✔ Total params      : {total_count:,}")
+    print(f"  [OK] Trainable params  : {trainable_count:,}")
+    print(f"  [OK] Total params      : {total_count:,}")
     return model
 
 
@@ -329,7 +329,7 @@ def _unfreeze_top_layers(model: nn.Module, n_blocks: int = 4) -> nn.Module:
         parameter.requires_grad = True
 
     unfrozen = sum(1 for parameter in model.parameters() if parameter.requires_grad)
-    print(f"  ✔ Unfrozen parameter tensors: {unfrozen}")
+    print(f"  [OK] Unfrozen parameter tensors: {unfrozen}")
     return model
 
 
@@ -493,7 +493,7 @@ def _plot_training(history: dict[str, list[float]]):
     plt.tight_layout()
     plt.savefig("training_curves.png", dpi=120)
     plt.close()
-    print("  ✔ Training curves saved → training_curves.png")
+    print("  [OK] Training curves saved -> training_curves.png")
 
 
 # ---------------------------------------------------------------------------
@@ -547,7 +547,7 @@ def evaluate_model(model: nn.Module, val_loader: DataLoader):
     plt.tight_layout()
     plt.savefig("confusion_matrix.png", dpi=120)
     plt.close()
-    print("  ✔ Confusion matrix saved → confusion_matrix.png")
+    print("  [OK] Confusion matrix saved -> confusion_matrix.png")
 
     return {"accuracy": accuracy}
 
@@ -636,7 +636,7 @@ def save_model(model: nn.Module):
     torch.save(payload, CONFIG["model_save_path"])
     with open(CONFIG["metadata_path"], "w", encoding="utf-8") as handle:
         json.dump({"classes": CONFIG["classes"], "config": CONFIG}, handle, indent=2)
-    print(f"\n  ✔ Model saved → {CONFIG['model_save_path']}")
+    print(f"\n  [OK] Model saved -> {CONFIG['model_save_path']}")
 
 
 def load_trained_model() -> nn.Module:
@@ -649,7 +649,7 @@ def load_trained_model() -> nn.Module:
     model = build_model(freeze_base=False)
     model.load_state_dict(payload["model_state"])
     model.eval()
-    print(f"  ✔ Model loaded from {path}")
+    print(f"  [OK] Model loaded from {path}")
     return model
 
 

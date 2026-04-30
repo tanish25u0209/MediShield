@@ -150,3 +150,17 @@ The current evaluation harness is:
 The current scoring framework is documented in:
 
 - [MEDISHIELD_EVALUATION_FRAMEWORK.md](/d:/Projects/kle%20asteria/MEDISHIELD_EVALUATION_FRAMEWORK.md)
+
+## 7. End-to-End Entry Point
+
+The current one-command pipeline launcher is:
+
+- [run.py](/d:/Projects/kle%20asteria/run.py)
+
+It calls the existing glue layer in [medishield_pipeline.py](/d:/Projects/kle%20asteria/medishield_pipeline.py) and returns the combined OCR, classifier, and risk output.
+
+Example:
+
+```bash
+python run.py img1.jpg img2.jpg
+```

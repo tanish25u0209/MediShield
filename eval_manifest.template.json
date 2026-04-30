@@ -1,0 +1,21 @@
+{
+  "samples": [
+    {
+      "images": [
+        "path/to/front.jpg",
+        "path/to/back.jpg",
+        "path/to/strip.jpg"
+      ],
+      "ground_truth": {
+        "medicine_name": "Amoxicillin",
+        "batch_number": "B202",
+        "expiry_date": "06/2027",
+        "mfg_date": "06/2024",
+        "manufacturer": "Cipla Ltd"
+      },
+      "class_label": "Tablet",
+      "expected_validation_flag": false,
+      "expected_risk_level": "Safe"
+    }
+  ]
+}

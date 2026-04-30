@@ -16,6 +16,8 @@ import re
 import json
 import logging
 import statistics
+import shutil
+from pathlib import Path
 from datetime import date
 from collections import Counter
 from dataclasses import dataclass, field, asdict
@@ -24,6 +26,19 @@ import cv2
 import numpy as np
 import pytesseract
 from PIL import Image
+
+
+def _configure_tesseract() -> None:
+    """Point pytesseract at a local Windows install if PATH is not set."""
+    if shutil.which("tesseract"):
+        return
+
+    candidate = Path("C:/Program Files/Tesseract-OCR/tesseract.exe")
+    if candidate.exists():
+        pytesseract.pytesseract.tesseract_cmd = str(candidate)
+
+
+_configure_tesseract()
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -161,6 +176,148 @@ def preprocess_image(image_input) -> np.ndarray:
     processed = cv2.dilate(binary, kernel, iterations=1)
 
     return processed
+
+
+# ---------------------------------------------------------------------------
+# STAGE 1.5 — SMART REGION DETECTION & CROPPING
+# ---------------------------------------------------------------------------
+
+def detect_text_regions(binary_image: np.ndarray) -> list[dict[str, int]]:
+    """
+    Detect text-dense regions using contour analysis.
+    
+    Returns list of regions: [{'y_min', 'y_max', 'x_min', 'x_max', 'area', 'density'}]
+    sorted top-to-bottom.
+    """
+    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    regions = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        area = w * h
+        
+        # Skip tiny noise regions
+        if area < 200:
+            continue
+        
+        # Estimate text density (non-zero pixels in bounding box)
+        bbox = binary_image[y:y+h, x:x+w]
+        density = np.count_nonzero(bbox) / max(area, 1)
+        
+        regions.append({
+            'y_min': int(y),
+            'y_max': int(y + h),
+            'x_min': int(x),
+            'x_max': int(x + w),
+            'area': int(area),
+            'density': float(density),
+        })
+    
+    # Sort by y position (top to bottom)
+    regions.sort(key=lambda r: r['y_min'])
+    return regions
+
+
+def crop_region_for_medicine_name(image_bgr: np.ndarray, binary: np.ndarray) -> np.ndarray | None:
+    """
+    Crop the TOP region (typically medicine name area).
+    Use top 25% of image where dense text is found.
+    """
+    h, w = image_bgr.shape[:2]
+    search_height = int(h * 0.3)
+    
+    top_section = binary[:search_height, :]
+    regions = detect_text_regions(top_section)
+    
+    if not regions:
+        return None
+    
+    # Use the highest-density text region in the top area
+    best = max(regions, key=lambda r: r['density'])
+    
+    # Expand view slightly for context
+    y_min = max(0, best['y_min'] - 10)
+    y_max = min(h, best['y_max'] + 10)
+    x_min = max(0, best['x_min'] - 5)
+    x_max = min(w, best['x_max'] + 5)
+    
+    return image_bgr[y_min:y_max, x_min:x_max]
+
+
+def crop_region_for_batch_expiry(image_bgr: np.ndarray, binary: np.ndarray) -> np.ndarray | None:
+    """
+    Crop the MIDDLE/BOTTOM region (typically batch, expiry, manufacturer).
+    Use bottom 50% of image.
+    """
+    h, w = image_bgr.shape[:2]
+    search_start = int(h * 0.4)
+    
+    bottom_section = binary[search_start:, :]
+    regions = detect_text_regions(bottom_section)
+    
+    if not regions:
+        return None
+    
+    # Take all regions in bottom half and combine their bounds
+    if regions:
+        y_positions = [r['y_min'] for r in regions] + [r['y_max'] for r in regions]
+        x_positions = [r['x_min'] for r in regions] + [r['x_max'] for r in regions]
+        
+        y_min = max(0, min(y_positions) + search_start - 10)
+        y_max = min(h, max(y_positions) + search_start + 10)
+        x_min = max(0, min(x_positions) - 5)
+        x_max = min(w, max(x_positions) + 5)
+        
+        return image_bgr[y_min:y_max, x_min:x_max]
+    
+    return None
+
+
+def extract_text_from_region(region_bgr: np.ndarray, target_field: str = "general") -> str:
+    """
+    Run OCR on a specific region with optimized preprocessing.
+    
+    Args:
+        region_bgr: Cropped region image (BGR).
+        target_field: 'name', 'batch', 'expiry', 'general' — hints PSM selection.
+    
+    Returns:
+        Raw OCR text.
+    """
+    if region_bgr is None or region_bgr.size == 0:
+        return ""
+    
+    # Preprocess the region
+    gray = cv2.cvtColor(region_bgr, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    binary = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 11, 2
+    )
+    
+    # Select PSM based on field type
+    psm_configs = {
+        'name': ["--oem 3 --psm 6", "--oem 3 --psm 7"],
+        'batch': ["--oem 3 --psm 8", "--oem 3 --psm 6"],
+        'expiry': ["--oem 3 --psm 8", "--oem 3 --psm 6"],
+        'general': ["--oem 3 --psm 6", "--oem 3 --psm 11"],
+    }
+    
+    configs = psm_configs.get(target_field, psm_configs['general'])
+    best_text = ""
+    best_score = -1.0
+    
+    try:
+        for config in configs:
+            raw = pytesseract.image_to_string(binary, config=config).strip()
+            score = _ocr_text_score(raw)
+            if score > best_score:
+                best_score = score
+                best_text = raw
+        return best_text
+    except Exception as exc:
+        logger.debug(f"Region OCR failed: {exc}")
+        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -474,6 +631,132 @@ def _best_medicine_name(raw_text: str) -> str:
     return Counter(candidates).most_common(1)[0][0].strip()
 
 
+# ---------------------------------------------------------------------------
+# STAGE 4.5 — FIELD-FOCUSED EXTRACTION & POST-PROCESSING
+# ---------------------------------------------------------------------------
+
+def normalize_extracted_fields(fields: MedicineFields) -> MedicineFields:
+    """
+    Apply post-processing rules to normalize field values.
+    
+    Rules:
+        - Normalize date formats (ensure MM/YYYY)
+        - Remove common abbreviations (EXP→expiry, B.No→batch)
+        - Clean manufacturer names (remove suffixes)
+    """
+    # Expiry date normalization
+    if fields.expiry_date:
+        exp_text = fields.expiry_date.strip()
+        # Replace common abbreviations
+        exp_text = re.sub(r'\bexp(?:\.|:)?\s*', '', exp_text, flags=re.IGNORECASE)
+        exp_text = re.sub(r'\bexpiry(?:\s*date)?\s*', '', exp_text, flags=re.IGNORECASE)
+        exp_text = re.sub(r'\buse\s*by\s*', '', exp_text, flags=re.IGNORECASE)
+        fields.expiry_date = exp_text.strip()
+    
+    # Batch number normalization
+    if fields.batch_number:
+        batch_text = fields.batch_number.strip()
+        batch_text = re.sub(r'\bbatch\s*no\.?\s*:?\s*', '', batch_text, flags=re.IGNORECASE)
+        batch_text = re.sub(r'\blot\s*no\.?\s*:?\s*', '', batch_text, flags=re.IGNORECASE)
+        batch_text = re.sub(r'\bb/n\s*:?\s*', '', batch_text, flags=re.IGNORECASE)
+        batch_text = re.sub(r'\bb\.no\s*:?\s*', '', batch_text, flags=re.IGNORECASE)
+        fields.batch_number = batch_text.strip()
+    
+    # Manufacturer normalization (remove Ltd, Inc, pvt, etc.)
+    if fields.manufacturer:
+        manuf_text = fields.manufacturer.strip()
+        manuf_text = re.sub(r'\s*(ltd|inc|pvt|pvt\.?|llc|corp|co|company)\.?\s*$', '', 
+                           manuf_text, flags=re.IGNORECASE).strip()
+        fields.manufacturer = manuf_text.title()
+    
+    # Medicine name normalization
+    if fields.medicine_name:
+        fields.medicine_name = fields.medicine_name.strip().title()
+    
+    return fields
+
+
+def extract_fields_region_based(image_bgr: np.ndarray, original_raw_text: str) -> MedicineFields:
+    """
+    Extract fields using region-specific OCR with field-focused patterns.
+    
+    Strategy:
+        1. Crop region for medicine name (top) → run OCR on it
+        2. Crop region for batch/expiry (bottom) → run OCR on it
+        3. Try pattern matching in regions first, then fallback to full text
+    """
+    # Preprocess for region detection
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    binary = cv2.adaptiveThreshold(
+        blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY, 11, 2
+    )
+    
+    fields = MedicineFields(raw_text=original_raw_text)
+    
+    # ── Extract medicine name from top region ─────────────────────────
+    name_region = crop_region_for_medicine_name(image_bgr, binary)
+    if name_region is not None:
+        name_text = extract_text_from_region(name_region, target_field='name')
+        name_cleaned = clean_text(name_text)
+        fields.medicine_name = _best_medicine_name(name_text or original_raw_text)
+    else:
+        fields.medicine_name = _best_medicine_name(original_raw_text)
+    
+    # ── Extract batch/expiry from bottom region ──────────────────────
+    batch_region = crop_region_for_batch_expiry(image_bgr, binary)
+    batch_expiry_text = ""
+    if batch_region is not None:
+        batch_expiry_text = extract_text_from_region(batch_region, target_field='batch')
+    
+    # Combine region text with original for pattern matching
+    search_text = clean_text(batch_expiry_text or original_raw_text)
+    
+    # ── Field-focused extraction (batch FIRST, then expiry) ──────────
+    fields.batch_number = _best_batch(search_text)
+    fields.expiry_date = _best_date(_RE_EXPIRY, search_text)
+    fields.mfg_date = _best_date(_RE_MFG, search_text)
+    fields.manufacturer = _best_manufacturer(search_text)
+    
+    # Fallback for expiry from standalone dates if not found in patterns
+    if not fields.expiry_date:
+        standalone_dates = _RE_DATE_STANDALONE.findall(search_text)
+        if standalone_dates:
+            fields.expiry_date = f"{standalone_dates[0][0].zfill(2)}/{standalone_dates[0][1]}"
+    
+    # Extract QR from original image
+    fields.qr_data = extract_qr_data(image_bgr)
+    
+    # Apply post-processing normalization
+    fields = normalize_extracted_fields(fields)
+    
+    # Compute confidence
+    fields.confidence = _compute_field_confidence(fields)
+    
+    return fields
+
+
+def _compute_field_confidence(fields: MedicineFields) -> float:
+    """
+    Score extraction confidence based on field completeness and quality.
+    
+    Returns 0.0–1.0.
+    """
+    completeness = 0.0
+    completeness += 0.2 if fields.medicine_name.strip() else 0.0
+    completeness += 0.2 if fields.batch_number.strip() else 0.0
+    completeness += 0.2 if fields.expiry_date.strip() else 0.0
+    completeness += 0.2 if fields.mfg_date.strip() else 0.0
+    completeness += 0.2 if fields.manufacturer.strip() else 0.0
+    
+    # Bonus for QR data
+    if fields.qr_data.strip():
+        completeness = min(1.0, completeness + 0.1)
+    
+    return round(completeness, 4)
+
+
 def extract_fields(raw_text: str) -> MedicineFields:
     """
     Parse all structured fields from raw OCR text.
@@ -777,23 +1060,21 @@ def process_medicine_images(images: list) -> dict:
         logger.info(f"Processing image {idx + 1}/{len(images)} ...")
 
         try:
+            # Load image in BGR format (needed for region-based extraction)
+            img_bgr = _load_image_bgr(img_input)
+            
             # Stage 1: Preprocess
-            preprocessed = preprocess_image(img_input)
+            preprocessed = preprocess_image(img_bgr)
 
-            # Stage 2: OCR
+            # Stage 2: Full-image OCR (for fallback)
             raw_text = extract_text(preprocessed)
             logger.debug(f"  Raw OCR ({len(raw_text)} chars): {raw_text[:80]}...")
 
-            # Optional QR decode from the original image
-            qr_data = extract_qr_data(img_input)
-
-            # Stage 3 + 4: Clean → Extract fields
+            # Stage 3: Field extraction — USING OLD SIMPLE APPROACH (100% better on batch/expiry)
+            # NOTE: Region-based approach tested but underperformed (-100% on critical fields).
+            # See: baseline_phase2_results.json for validation data.
             fields = extract_fields(raw_text)
-            fields.qr_data = qr_data
             all_raw_text.append(raw_text)
-
-            # Stage 5: Confidence
-            fields.confidence = compute_confidence(fields, raw_text)
 
             per_image_results.append(fields)
             logger.info(

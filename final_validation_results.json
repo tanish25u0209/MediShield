@@ -1,0 +1,92 @@
+{
+  "validation_date": "D:\\Projects\\kle asteria",
+  "status": "PASS",
+  "total_samples": 8,
+  "metrics": {
+    "batch_detection_rate": 1.0,
+    "expiry_detection_rate": 1.0,
+    "avg_completeness": 3.5
+  },
+  "samples": [
+    {
+      "sample": "synthetic_01_paracetamol",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": true,
+      "completeness": 4
+    },
+    {
+      "sample": "synthetic_02_aspirin",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": false,
+      "completeness": 3
+    },
+    {
+      "sample": "synthetic_03_amoxicillin",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": true,
+      "completeness": 4
+    },
+    {
+      "sample": "synthetic_04_ibuprofen",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": true,
+      "completeness": 4
+    },
+    {
+      "sample": "synthetic_05_metformin",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": false,
+      "completeness": 3
+    },
+    {
+      "sample": "synthetic_06_cough",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": false,
+      "completeness": 3
+    },
+    {
+      "sample": "synthetic_07_multivitamin",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": true,
+      "completeness": 4
+    },
+    {
+      "sample": "synthetic_08_vitamin",
+      "images": 2,
+      "batch": true,
+      "expiry": true,
+      "mfg": false,
+      "name": true,
+      "maker": false,
+      "completeness": 3
+    }
+  ]
+}
