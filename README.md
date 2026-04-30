@@ -65,6 +65,21 @@ This runs:
 2. packaging classification
 3. risk scoring
 
+### Proof-layer demo
+
+```bash
+python demo.py --images img1.jpg img2.jpg img3.jpg
+```
+
+This prints:
+
+1. risk score, status, and confidence
+2. explanation list
+3. failure visualization
+4. clean JSON output
+
+For the before/after story, see [DEMO_GUIDE.md](DEMO_GUIDE.md).
+
 ---
 
 ```bash

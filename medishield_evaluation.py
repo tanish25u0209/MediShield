@@ -370,7 +370,6 @@ def evaluate_manifest(manifest: list[dict[str, Any]], classifier_model_path: str
         fused_score = weighted_field_score(similarities_fused)
         single_record_exact = all(exact_single.values())
         fused_record_exact = all(exact_fused.values())
-        classifier_conf_bucket = _bucket_label(predicted_conf)
 
         single_ocr.add(single_record_exact, single_score)
         fused_ocr.add(fused_record_exact, fused_score)
@@ -394,6 +393,7 @@ def evaluate_manifest(manifest: list[dict[str, Any]], classifier_model_path: str
         classifier_result = predict_image(images[0], classifier_model)
         predicted_class = classifier_result["predicted_type"]
         predicted_conf = float(classifier_result["confidence"])
+        classifier_conf_bucket = _bucket_label(predicted_conf)
 
         if class_idx is not None:
             classifier_total += 1

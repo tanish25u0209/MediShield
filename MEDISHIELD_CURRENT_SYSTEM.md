@@ -23,13 +23,18 @@ File: `medishield_ocr.py`
 ### Current flow
 
 1. Input a list of images for the same medicine.
-2. Preprocess each image for OCR.
-3. Run Tesseract OCR with multiple page segmentation modes.
-4. Decode QR data from the original image when available.
-5. Extract structured fields from the OCR text.
-6. Validate the extracted fields.
-7. Fuse results across multiple images.
-8. Return a structured JSON-like dictionary.
+2. Split each image into fixed OCR regions:
+   - top: medicine name
+   - middle: manufacturer / composition
+   - bottom: batch / expiry / MFG
+3. Run targeted Tesseract OCR on each region with field-specific PSM modes.
+4. Apply contrast normalization, denoising, and sharpening before OCR.
+5. Reject obvious garbage OCR strings before parsing.
+6. Extract fields using strict regex rules.
+7. Decode QR data from the original image when available.
+8. Validate the extracted fields.
+9. Fuse results across multiple images using a consensus gate.
+10. Return a structured JSON-like dictionary.
 
 ### Fields extracted
 
@@ -43,10 +48,12 @@ File: `medishield_ocr.py`
 ### OCR details
 
 - Uses OpenCV preprocessing.
-- Tries several Tesseract layouts instead of only one.
-- Scores OCR text to pick the most useful result.
-- Uses heuristics to locate the medicine name near the top of the label.
-- Fallback parsing is used for dates if the labelled pattern is missed.
+- Uses stronger contrast normalization, denoising, and sharpening.
+- Uses fixed top / middle / bottom regions instead of treating the whole image as one OCR unit.
+- Runs field-specific Tesseract layouts for name, manufacturer, batch, and expiry.
+- Rejects very short or low-quality OCR strings before parsing.
+- Uses strict pattern matching for batch, expiry, and MFG instead of loose guessing.
+- Uses a consensus gate so a field is only accepted when at least two images agree.
 
 ### Validation
 
@@ -163,4 +170,24 @@ Example:
 
 ```bash
 python run.py img1.jpg img2.jpg
+```
+
+## 8. Proof-Layer Demo
+
+The current presentation-focused demo entrypoint is:
+
+- [demo.py](/d:/Projects/kle%20asteria/demo.py)
+
+It prints:
+
+- final risk score
+- status and confidence
+- explanation list
+- failure visualization
+- clean JSON output
+
+Example:
+
+```bash
+python demo.py --images img1.jpg img2.jpg img3.jpg
 ```
