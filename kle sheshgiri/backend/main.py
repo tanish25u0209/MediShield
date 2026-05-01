@@ -1,5 +1,6 @@
 import json
 import hashlib
+import os
 import uuid
 import sys
 import tempfile
@@ -65,15 +66,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="MediShield Backend", lifespan=lifespan)
+frontend_origin = (os.getenv("FRONTEND_ORIGIN") or "").strip()
+allowed_origins = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+]
+if frontend_origin:
+    allowed_origins.append(frontend_origin)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-    ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
