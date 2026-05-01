@@ -1,0 +1,76 @@
+INFO:     127.0.0.1:62159 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54170 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:60514 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:59432 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:55276 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:59542 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:59614 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:55358 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:49396 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:55353 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:64705 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64705 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64705 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:64705 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:64705 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:64705 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:64705 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58202 - "OPTIONS /auth/signup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58202 - "POST /auth/signup HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64705 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:64700 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64700 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52218 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:58494 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:62549 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:52364 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:60010 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60010 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60010 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:54368 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /predict?name=Au HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /predict?name=Aug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /predict?name=Augne HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /predict?name=Aug HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /predict?name=Augmentin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "GET /predict?name=Augmentin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52912 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:60113 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60113 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64699 - "GET /predict?name=Augmentin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64699 - "GET /predict?name=Augmentin HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64699 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:53434 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:57663 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:57214 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:52184 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:60875 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58021 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64708 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64709 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64710 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64711 - "POST /scan HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:51896 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:60911 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60912 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60914 - "POST /scan HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57858 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51475 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:62577 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:56882 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:57221 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54192 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54843 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:57690 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58534 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:65105 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49844 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:54195 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59017 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:56987 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:58710 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:64949 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51169 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50935 - "POST /scan HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:50510 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65504 - "POST /scan HTTP/1.1" 500 Internal Server Error

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Medicine Use Detector</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="lookup-panel" aria-labelledby="app-title">
+        <div class="heading-row">
+          <div>
+            <p class="eyebrow">AI assisted lookup</p>
+            <h1 id="app-title">Medicine Use Detector</h1>
+          </div>
+          <span class="status-pill">Online lookup</span>
+        </div>
+
+        <form class="search-form" id="medicine-form">
+          <label for="medicine-input">Medicine name</label>
+          <div class="search-row">
+            <input
+              id="medicine-input"
+              name="medicine"
+              type="search"
+              autocomplete="off"
+              placeholder="Type a medicine name, e.g. Paracetamol"
+              aria-describedby="input-help"
+            />
+            <button type="submit" id="detect-button">Detect</button>
+          </div>
+          <p id="input-help">
+            Enter the tablet, syrup, capsule, or brand/generic name written on the strip or bottle.
+          </p>
+        </form>
+
+        <div class="result-card" id="result-card" aria-live="polite">
+          <div class="empty-state">
+            <span class="empty-icon" aria-hidden="true">+</span>
+            <p>Type a medicine name to see what it is generally used for.</p>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel" aria-label="Popular medicine examples">
+        <h2>Try Examples</h2>
+        <div class="chips" id="example-list"></div>
+
+        <div class="notice">
+          <h2>Important</h2>
+          <p>
+            This tool searches public drug labels when internet is available. Do not start, stop, or mix medicines based only on this result.
+            Ask a doctor or pharmacist for personal medical advice.
+          </p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

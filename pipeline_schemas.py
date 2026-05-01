@@ -18,7 +18,9 @@ class FinalField:
     state: str  # CONFIRMED | REJECTED
     confidence_score: float
     rejection_reason: str = ""
+    failure_mode: str = ""
     evidence_sources: List[Any] = field(default_factory=list)
+    signal_breakdown: Dict[str, Any] = field(default_factory=dict)
     validation_flags: Dict[str, bool] = field(default_factory=lambda: {
         "evidence_sufficient": False,
         "no_contradiction": False,
@@ -32,7 +34,9 @@ class FinalField:
             "state": self.state,
             "confidence_score": round(float(self.confidence_score or 0.0), 4),
             "rejection_reason": self.rejection_reason,
+            "failure_mode": self.failure_mode,
             "evidence_sources": list(self.evidence_sources),
+            "signal_breakdown": dict(self.signal_breakdown),
             "validation_flags": dict(self.validation_flags),
         }
 

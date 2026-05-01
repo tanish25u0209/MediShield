@@ -15,6 +15,7 @@ System requirement:
 import re
 import json
 import logging
+import os
 import statistics
 import shutil
 from difflib import SequenceMatcher
@@ -71,6 +72,9 @@ class MedicineFields:
     manufacturer_confidence: float = 0.0
     raw_text: str = ""
     failure_map: dict[str, str] = field(default_factory=dict)
+    image_profile: str = "HEAVY_DISTORTION"
+    image_profile_score: float = 0.0
+    semantic_variance_score: float = 0.0
 
 
 @dataclass
@@ -87,6 +91,103 @@ class ValidationResult:
     validation_score: float = 0.0
     issue_count: int = 0
     issues: list[str] = field(default_factory=list)
+
+
+DEMO_STABILITY_MODE = os.environ.get("MEDISHIELD_DEMO_STABILITY_MODE", "1").strip().lower() not in {"0", "false", "no"}
+
+IMAGE_PROFILE_WEIGHTS = {
+    "CLEAN_SIGNAL": 1.00,
+    "OCR_NOISY": 0.82,
+    "PARTIAL_LABEL": 0.68,
+    "HEAVY_DISTORTION": 0.50,
+}
+
+
+def _profile_weight(profile: str) -> float:
+    return IMAGE_PROFILE_WEIGHTS.get((profile or "HEAVY_DISTORTION").strip().upper(), 0.50)
+
+
+def _consolidated_failure_mode(rejection_reason: str, signal_breakdown: dict[str, Any] | None = None) -> str:
+    reason = str(rejection_reason or "").strip()
+    signal_breakdown = signal_breakdown or {}
+    if reason == "FORMAT_INVALID":
+        return "FORMAT_VIOLATION"
+    if reason in {"CROSS_CONFLICT_BLOCKED", "EVIDENCE_CONTRADICTION"}:
+        return "CONSISTENT_CONFLICT"
+    if reason in {"LOW_OCR_CONFIDENCE", "NOISE", "NOISE_DOMINANT", "NOISE_DOMINANCE"}:
+        return "NOISE_FAILURE"
+    if bool(signal_breakdown.get("single_image_dominance_blocked")):
+        return "SINGLE_IMAGE_DOMINANCE_BLOCKED"
+    if reason in {"NO_VALID_CANDIDATES", "WEAK_SIGNAL_REJECTED", "INSUFFICIENT_EVIDENCE"}:
+        return "INSUFFICIENT_EVIDENCE"
+    return "INSUFFICIENT_EVIDENCE"
+
+
+def _semantic_variance_score(values: list[str], field_name: str) -> float:
+    normalized = []
+    for value in values:
+        text = _normalize_for_field(field_name, value)
+        if text:
+            normalized.append(text)
+    if len(normalized) <= 1:
+        return 0.0
+    pairs = 0
+    variance = 0.0
+    for i in range(len(normalized)):
+        for j in range(i + 1, len(normalized)):
+            pairs += 1
+            if field_name == "medicine_name":
+                similarity = max(
+                    SequenceMatcher(None, normalized[i].lower(), normalized[j].lower()).ratio(),
+                    SequenceMatcher(
+                        None,
+                        re.sub(r"[^A-Z0-9]", "", normalized[i].upper()),
+                        re.sub(r"[^A-Z0-9]", "", normalized[j].upper()),
+                    ).ratio(),
+                )
+            else:
+                similarity = 1.0 if normalized[i] == normalized[j] else SequenceMatcher(None, normalized[i], normalized[j]).ratio()
+            variance += 1.0 - similarity
+    return round(variance / max(pairs, 1), 4)
+
+
+def _classify_image_adversarial_profile(fields: MedicineFields, raw_text: str, ocr_confidence: float, trace: dict[str, Any] | None = None) -> tuple[str, float]:
+    text = (raw_text or "").strip()
+    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9\-/\.]*", text)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    symbol_chars = sum(1 for ch in text if not ch.isalnum() and not ch.isspace())
+    char_count = max(len(text), 1)
+    symbol_ratio = symbol_chars / char_count
+    field_presence = sum(
+        1
+        for value in (
+            fields.medicine_name,
+            fields.batch_number,
+            fields.expiry_date,
+            fields.mfg_date,
+            fields.manufacturer,
+        )
+        if str(value or "").strip()
+    )
+    label_hits = sum(
+        1
+        for keyword in ("batch", "exp", "expiry", "mfg", "manufact", "medicine")
+        if keyword in text.lower()
+    )
+    line_fragmentation = 1.0 - min(1.0, len(lines) / 6.0)
+    token_fragmentation = 1.0 - min(1.0, len(tokens) / 24.0)
+    trace_confidence = float((trace or {}).get("ocr_calls", 2) or 2)
+    confidence_pressure = 1.0 - min(1.0, max(float(ocr_confidence or 0.0), 0.0))
+
+    if not text or not tokens or symbol_ratio >= 0.42 or confidence_pressure >= 0.72:
+        return "HEAVY_DISTORTION", 0.50
+    if ocr_confidence < 0.48 or symbol_ratio >= 0.26 or line_fragmentation >= 0.42:
+        return "OCR_NOISY", 0.82
+    if field_presence <= 2 or label_hits <= 1 or token_fragmentation >= 0.55:
+        return "PARTIAL_LABEL", 0.68
+    if trace_confidence < 2 or ocr_confidence < 0.7:
+        return "OCR_NOISY", 0.82
+    return "CLEAN_SIGNAL", 1.0
 
 
 @dataclass
@@ -440,7 +541,11 @@ def ocr_core(image_input) -> tuple[str, float]:
     
     # Store execution trace for debugging
     trace = {
+        "ocr_calls": 2,
         "tesseract_calls": 2,
+        "stage_1_used": True,
+        "stage_2_used": True,
+        "fallback_triggered": False,
         "raw_text": raw_text,
         "confidence": round(avg_confidence, 4),
         "contract_enforced": "2_calls_per_image",
@@ -450,7 +555,13 @@ def ocr_core(image_input) -> tuple[str, float]:
     return raw_text, round(avg_confidence, 4)
 
 
-ocr_core.last_trace = {"ocr_calls": 0, "fallback_triggered": True, "tesseract_calls": 0}  # type: ignore[attr-defined]
+ocr_core.last_trace = {
+    "ocr_calls": 0,
+    "fallback_triggered": True,
+    "tesseract_calls": 0,
+    "stage_1_used": False,
+    "stage_2_used": False,
+}  # type: ignore[attr-defined]
 
 
 def preprocess_image(image_input) -> np.ndarray:
@@ -3782,12 +3893,59 @@ def _build_field_decisions(
                     }
                 )
 
+        signal_breakdown = {
+            "signal_availability": {
+                "has_candidate_values": bool(field_evidence.get("candidate_values")),
+                "has_cross_image_support": float(field_evidence.get("cross_image_score", 0.0) or 0.0) >= 0.5,
+                "has_region_support": float(field_evidence.get("region_score", 0.0) or 0.0) >= 0.4,
+                "has_structure_support": float(field_evidence.get("structure_score", 0.0) or 0.0) > 0.0,
+                "has_noise_pressure": float(field_evidence.get("noise_ratio", 0.0) or 0.0) >= 0.45,
+                "has_semantic_variance": False,
+            },
+            "candidate_count": int(field_evidence.get("candidate_count", 0) or 0),
+            "best_score": round(float(field_evidence.get("best_score", 0.0) or 0.0), 4),
+            "region_origin": field_evidence.get("region_origin", "unknown"),
+            "structure_origin": field_evidence.get("structure_origin", "unknown"),
+            "cross_image_score": round(float(field_evidence.get("cross_image_score", 0.0) or 0.0), 4),
+            "region_score": round(float(field_evidence.get("region_score", 0.0) or 0.0), 4),
+            "region_alignment_score": round(float(field_evidence.get("region_score", 0.0) or 0.0), 4),
+            "structure_score": round(float(field_evidence.get("structure_score", 0.0) or 0.0), 4),
+            "noise_score": round(float(field_evidence.get("noise_ratio", 0.0) or 0.0), 4),
+            "cross_image_support_score": round(float(field_evidence.get("cross_image_score", 0.0) or 0.0), 4),
+            "format_validity_score": 1.0 if not field_evidence.get("rejection_reason") or field_evidence.get("rejection_reason") != "FORMAT_INVALID" else 0.0,
+            "conflict_score": 1.0 if field_evidence.get("rejection_reason") in {"CROSS_CONFLICT_BLOCKED", "EVIDENCE_CONTRADICTION"} else 0.0,
+            "semantic_variance_score": round(_semantic_variance_score([getattr(image, field_name) for image in per_image_results], field_name), 4),
+            "final_score": round(float(field_evidence.get("final_score", 0.0) or 0.0), 4),
+            "final_score_components": dict(field_evidence.get("final_score_components", {}) or {}),
+        }
+        signal_breakdown["consistency_stress_score"] = round(
+            max(
+                float(signal_breakdown.get("conflict_score", 0.0) or 0.0),
+                float(signal_breakdown.get("semantic_variance_score", 0.0) or 0.0),
+            ),
+            4,
+        )
+        signal_breakdown["signal_availability"]["has_semantic_variance"] = bool(signal_breakdown["semantic_variance_score"] > 0.0)
+        signal_breakdown["calibrated_confidence"] = round(
+            0.35 * float(signal_breakdown.get("cross_image_support_score", 0.0) or 0.0)
+            + 0.25 * float(signal_breakdown.get("format_validity_score", 0.0) or 0.0)
+            + 0.20 * float(signal_breakdown.get("region_alignment_score", 0.0) or 0.0)
+            + 0.20 * (1.0 - float(signal_breakdown.get("noise_score", 0.0) or 0.0)),
+            4,
+        )
+        signal_breakdown["decision_state"] = "CONFIRMED" if state == "CONFIRMED" else "WEAK_CONFIRMED"
+
+        rejection_reason = "" if state == "CONFIRMED" else field_evidence.get("rejection_reason", "") or field_evidence.get("empty_reason", "") or "WEAK_SIGNAL_REJECTED"
+        failure_mode = _consolidated_failure_mode(rejection_reason, signal_breakdown)
+
         decisions[field_name] = {
             "value": field_value,
             "state": state,
             "confidence_score": round(confidence_score, 4),
-            "rejection_reason": "" if state == "CONFIRMED" else field_evidence.get("rejection_reason", "") or field_evidence.get("empty_reason", "") or "WEAK_SIGNAL_REJECTED",
+            "rejection_reason": rejection_reason,
+            "failure_mode": failure_mode,
             "evidence_sources": evidence_sources,
+            "signal_breakdown": signal_breakdown,
         }
 
     return decisions
@@ -3807,7 +3965,11 @@ def evidence_truth_validator(
     }
     validation_flags: dict[str, dict[str, bool]] = {}
     total_tokens = max(sum(len((img.raw_text or "").split()) for img in per_image_results), 1)
-    noisy_tokens = sum(len(evidence.get(name, {}).get("candidate_values", [])) for name in CORE_FIELD_NAMES if evidence.get(name, {}).get("rejection_reason") in {"NOISE", "WEAK_SIGNAL_REJECTED"})
+    noisy_tokens = sum(
+        len(evidence.get(name, {}).get("candidate_values", []))
+        for name in CORE_FIELD_NAMES
+        if evidence.get(name, {}).get("rejection_reason") in {"NOISE", "WEAK_SIGNAL_REJECTED", "NOISE_DOMINANT", "LOW_OCR_CONFIDENCE"}
+    )
     noise_ratio = noisy_tokens / total_tokens
 
     for field_name in CORE_FIELD_NAMES:
@@ -3833,6 +3995,18 @@ def evidence_truth_validator(
         no_contradiction = not has_contradiction
         cross_image_supported = support_images >= 2 or (support_images == 1 and field_evidence.get("structure_score", 0.0) >= 0.35)
         noise_within_limit = noise_ratio <= 0.4 and field_evidence.get("noise_class", "CLEAN") != "NOISE"
+        semantic_variance_score = float(field_evidence.get("semantic_variance_score", 0.0) or 0.0)
+        supporting_signal_count = sum(
+            1
+            for signal in (
+                bool(evidence_sufficient),
+                bool(no_contradiction),
+                bool(cross_image_supported),
+                bool(noise_within_limit),
+                semantic_variance_score > 0.0,
+            )
+            if signal
+        )
 
         if state == "CONFIRMED":
             direct_support = any(
@@ -3840,12 +4014,15 @@ def evidence_truth_validator(
                 for src in evidence_sources
                 if isinstance(src, dict)
             )
-            if not (evidence_sufficient and no_contradiction and cross_image_supported and noise_within_limit and direct_support):
+            if not (evidence_sufficient and no_contradiction and cross_image_supported and noise_within_limit and direct_support and supporting_signal_count >= 1):
                 validated_decisions[field_name]["state"] = "REJECTED"
                 validated_decisions[field_name]["value"] = ""
                 validated_decisions[field_name]["rejection_reason"] = "EVIDENCE_CONTRADICTION" if has_contradiction else "WEAK_SIGNAL_REJECTED"
-                validated_fields_value = ""
-                setattr(validated_fields, field_name, validated_fields_value)
+                validated_decisions[field_name]["failure_mode"] = _consolidated_failure_mode(
+                    validated_decisions[field_name]["rejection_reason"],
+                    validated_decisions[field_name].get("signal_breakdown", {}),
+                )
+                setattr(validated_fields, field_name, "")
             else:
                 setattr(validated_fields, field_name, field_value)
         else:
@@ -3860,6 +4037,10 @@ def evidence_truth_validator(
                 else:
                     validated_decisions[field_name]["rejection_reason"] = "WEAK_SIGNAL_REJECTED"
             setattr(validated_fields, field_name, "")
+            validated_decisions[field_name]["failure_mode"] = _consolidated_failure_mode(
+                validated_decisions[field_name]["rejection_reason"],
+                validated_decisions[field_name].get("signal_breakdown", {}),
+            )
 
         validation_flags[field_name] = {
             "evidence_sufficient": bool(evidence_sufficient),
@@ -3868,13 +4049,44 @@ def evidence_truth_validator(
             "noise_within_limit": bool(noise_within_limit),
         }
         validated_decisions[field_name]["validation_flags"] = validation_flags[field_name]
+        validated_decisions[field_name]["signal_breakdown"] = dict(validated_decisions[field_name].get("signal_breakdown", {}))
+        validated_decisions[field_name]["signal_breakdown"]["semantic_variance_score"] = round(semantic_variance_score, 4)
+        validated_decisions[field_name]["signal_breakdown"]["consistency_stress_score"] = round(
+            max(
+                float(validated_decisions[field_name]["signal_breakdown"].get("conflict_score", 0.0) or 0.0),
+                semantic_variance_score,
+            ),
+            4,
+        )
+        validated_decisions[field_name]["signal_breakdown"]["calibrated_confidence"] = round(
+            0.35 * float(validated_decisions[field_name]["signal_breakdown"].get("cross_image_support_score", validated_decisions[field_name]["signal_breakdown"].get("cross_image_agreement", 0.0)) or 0.0)
+            + 0.25 * float(validated_decisions[field_name]["signal_breakdown"].get("format_validity_score", 0.0) or 0.0)
+            + 0.20 * float(validated_decisions[field_name]["signal_breakdown"].get("region_alignment_score", validated_decisions[field_name]["signal_breakdown"].get("region_consistency_score", 0.0)) or 0.0)
+            + 0.20 * (1.0 - float(validated_decisions[field_name]["signal_breakdown"].get("noise_score", validated_decisions[field_name]["signal_breakdown"].get("noise_ratio", 0.0)) or 0.0)),
+            4,
+        )
+        validated_decisions[field_name]["signal_breakdown"]["decision_state"] = "CONFIRMED" if getattr(validated_fields, field_name).strip() else "WEAK_CONFIRMED"
         validated_decisions[field_name]["state"] = "CONFIRMED" if getattr(validated_fields, field_name).strip() else "REJECTED"
         validated_decisions[field_name]["confidence_score"] = round(
             float(validated_decisions[field_name].get("confidence_score", 0.0) or 0.0),
             4,
         )
+        if validated_decisions[field_name]["state"] == "CONFIRMED" and supporting_signal_count < 1:
+            validated_decisions[field_name]["state"] = "REJECTED"
+            validated_decisions[field_name]["value"] = ""
+            validated_decisions[field_name]["rejection_reason"] = "WEAK_SIGNAL_REJECTED"
+            validated_decisions[field_name]["failure_mode"] = "INSUFFICIENT_EVIDENCE"
+            setattr(validated_fields, field_name, "")
+        elif validated_decisions[field_name]["state"] == "REJECTED":
+            validated_decisions[field_name]["failure_mode"] = _consolidated_failure_mode(
+                validated_decisions[field_name].get("rejection_reason", ""),
+                validated_decisions[field_name].get("signal_breakdown", {}),
+            )
         if not getattr(validated_fields, field_name).strip():
             validated_decisions[field_name]["value"] = ""
+        if validated_decisions[field_name]["state"] == "REJECTED" and not validated_decisions[field_name].get("failure_mode"):
+            validated_decisions[field_name]["failure_mode"] = "INSUFFICIENT_EVIDENCE"
+        validated_decisions[field_name]["signal_breakdown"]["decision_state"] = validated_decisions[field_name]["state"]
 
     return validated_fields, validated_decisions, validation_flags
 
@@ -4064,6 +4276,10 @@ def process_medicine_images(images: list) -> dict:
             fields = extract_fields(raw_text)
             fields.raw_text = raw_text
             fields.confidence = round(_clamp(0.55 * fields.confidence + 0.45 * ocr_confidence), 4)
+            profile, profile_score = _classify_image_adversarial_profile(fields, raw_text, fields.confidence, trace)
+            fields.image_profile = profile
+            fields.image_profile_score = profile_score
+            fields.failure_map["image_profile"] = profile
             all_raw_text.append(raw_text)
 
             per_image_results.append(fields)
@@ -4085,7 +4301,11 @@ def process_medicine_images(images: list) -> dict:
     combined_raw_text = "\n\n--- IMAGE BREAK ---\n\n".join(all_raw_text)
     final_fields = _reconstruct_structured_fields(final_fields, combined_raw_text)
     image_pools = _collect_image_pools(per_image_results)
-    image_weights = [max(float(image.confidence), 0.01) for image in per_image_results]
+    image_weights = [
+        max(float(image.confidence), 0.01)
+        * (_profile_weight(image.image_profile) if DEMO_STABILITY_MODE else 1.0)
+        for image in per_image_results
+    ]
     soft_decisions = {
         "medicine_name": _soft_field_decision("medicine_name", image_pools, image_weights),
         "manufacturer": _soft_field_decision("manufacturer", image_pools, image_weights),
@@ -4221,6 +4441,9 @@ def _fields_to_dict(fields: MedicineFields, include_confidence: bool = True) -> 
         "manufacturer":  fields.manufacturer,
         "qr_data":       fields.qr_data,
         "failure_map":   fields.failure_map,
+        "image_profile": fields.image_profile,
+        "image_profile_score": round(float(fields.image_profile_score or 0.0), 4),
+        "semantic_variance_score": round(float(fields.semantic_variance_score or 0.0), 4),
     }
     if include_confidence:
         d["confidence"] = fields.confidence

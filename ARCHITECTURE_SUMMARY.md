@@ -1,3 +1,31 @@
+# MediShield Executive Architecture Summary
+
+MediShield is a multi-image medicine risk and intelligence system. It estimates the risk of counterfeit behavior by combining OCR, QR, vision-based packaging analysis, data fusion, validation, batch behavior simulation, and anomaly detection.
+
+## What the system does
+
+- Accepts multiple images of the same medicine package
+- Extracts medicine name, batch number, dates, manufacturer, and optional QR data
+- Fuses the fields across images to detect conflicts
+- Applies validation rules that work without a dataset
+- Simulates batch behavior for demo-friendly anomaly detection
+- Produces a risk score, confidence level, explanations, and drug information
+
+## Core architecture
+
+1. Multi-image input
+2. OCR + QR + vision extraction
+3. Data fusion and validation
+4. Batch intelligence and graph-style anomaly detection
+5. Final output: risk, confidence, explanations, graph cues, and drug info
+
+## Important framing
+
+- The product does not claim to prove a medicine is fake.
+- It estimates risk and highlights suspicious signals for human review.
+- Drug usage information is shown separately from risk scoring.
+- The technical deep-dive below is kept as reference material for the earlier implementation details.
+
 # MediShield Architecture at a Glance
 
 ## System Overview
@@ -410,18 +438,15 @@ medishield_evaluation.py
 
 ## Current Limitations & Notes
 
-1. **Region-based OCR:** Disabled in production. Segmented field extraction (top/bottom crops) **lost 100% accuracy** on critical fields vs. simple full-image approach. See [baseline_phase2_results.json](baseline_phase2_results.json).
+1. **Chemical verification is out of scope:** The system analyzes packaging, text, and behavior signals. It does not verify the chemical composition of a medicine.
 
-2. **QR verification:** Not yet connected to risk scoring. QR data is extracted and flagged for conflicts, but detailed QR↔label matching logic is a pending feature.
+2. **Batch intelligence is simulated for demo use:** The batch graph, burst logic, and geo-spread are intentionally demo-friendly. They are useful for illustrating behavior-based screening, but they are not a substitute for live population data.
 
-3. **Single-image confidence reduced:** When only 1 image provided, confidence automatically degraded (image_factor = 0, agreement undefined). This is intentional — cross-image verification is unavailable.
+3. **Single-image scans are weaker:** The system is designed for multi-image review. One image can still work, but confidence is lower because cross-image agreement is missing.
 
-4. **Classifier training data:** Sourced from Kaggle "Mobile-Captured Pharmaceutical Medication Packages" dataset. Generalization to real-world pharmacy images may vary.
+4. **QR is optional:** QR decoding is supported when present, but many medicines will not have QR data. The system still works without it.
 
-5. **Tesseract quality:** Depends on:
-   - Local Tesseract installation (Windows: `Program Files/Tesseract-OCR`)
-   - Image resolution (ideal: ≥ 200dpi for labels)
-   - Lighting and angle (adaptive threshold helps but has limits)
+5. **OCR quality still depends on image conditions:** Resolution, blur, glare, angle, and crop quality can affect field extraction.
 
 ---
 

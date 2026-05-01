@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
 MediShield: Submission-Ready System
-Judges can run this to test the complete OCR system.
+Judges can run this to test the complete unified pipeline.
 
 Usage:
     python submit.py
 """
 
-from pathlib import Path
-from medishield_ocr import process_medicine_images
+from medishield_pipeline import process_medicine
 import json
 
 def main():
@@ -43,37 +42,37 @@ def main():
     ]
     
     results = []
-    print(f"{'Sample':<25} {'Batch':<15} {'Expiry':<12} {'Name':<25}")
-    print("-" * 77)
+    print(f"{'Sample':<25} {'Verdict':<12} {'Conf':<8} {'Top reason':<45}")
+    print("-" * 95)
     
     for sample in test_samples:
-        result = process_medicine_images(sample["images"])
-        final = result["final_data"]
-        
-        batch = final.get("batch_number", "").strip() or "NOT FOUND"
-        expiry = final.get("expiry_date", "").strip() or "NOT FOUND"
-        name = final.get("medicine_name", "").strip() or "NOT FOUND"
-        
-        print(f"{sample['name']:<25} {batch:<15} {expiry:<12} {name:<25}")
-        
+        result = process_medicine(sample["images"])
+        final = result.get("final_output", {}) or {}
+        verdict = str(final.get("FINAL_VERDICT", "SUSPICIOUS") or "SUSPICIOUS")
+        confidence = str(final.get("CONFIDENCE_SCORE", 0) or 0)
+        reasons = final.get("TOP_3_REASONS", []) or []
+        top_reason = str(reasons[0]) if reasons else "No decisive reason available"
+
+        print(f"{sample['name']:<25} {verdict:<12} {confidence:<8} {top_reason:<45}")
+
         results.append({
             "sample": sample["name"],
-            "batch_found": bool(batch != "NOT FOUND"),
-            "expiry_found": bool(expiry != "NOT FOUND"),
-            "batch": batch,
-            "expiry": expiry,
-            "name": name
+            "verdict": verdict,
+            "confidence": confidence,
+            "top_reason": top_reason,
         })
     
-    print("-" * 77)
+    print("-" * 95)
     
     # Summary
-    batch_found = sum(1 for r in results if r["batch_found"])
-    expiry_found = sum(1 for r in results if r["expiry_found"])
+    high_risk = sum(1 for r in results if r["verdict"] == "HIGH_RISK")
+    suspicious = sum(1 for r in results if r["verdict"] == "SUSPICIOUS")
+    safe = sum(1 for r in results if r["verdict"] == "SAFE")
     
     print(f"\nSummary:")
-    print(f"  Batch numbers found: {batch_found}/{len(results)} ({batch_found/len(results)*100:.0f}%)")
-    print(f"  Expiry dates found:  {expiry_found}/{len(results)} ({expiry_found/len(results)*100:.0f}%)")
+    print(f"  SAFE:        {safe}/{len(results)} ({safe/len(results)*100:.0f}%)")
+    print(f"  SUSPICIOUS:  {suspicious}/{len(results)} ({suspicious/len(results)*100:.0f}%)")
+    print(f"  HIGH_RISK:   {high_risk}/{len(results)} ({high_risk/len(results)*100:.0f}%)")
     
     print("\n" + "="*80)
     print("System Status: READY FOR JUDGES")
